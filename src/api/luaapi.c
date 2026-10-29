@@ -23,6 +23,7 @@
 #include "core/core.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -1934,6 +1935,23 @@ static int lua_loadfile(lua_State* lua)
     return 0;
 }
 
+static const struct
+{
+    lua_CFunction func;
+    const char* name;
+} ApiItems[] =
+    {
+#define API_FUNC_DEF(name, ...) {(lua_CFunction)(lua_##name), #name},
+        TIC_API_LIST(API_FUNC_DEF)
+#undef API_FUNC_DEF
+
+#if defined(BUILD_DEPRECATED)
+            {(lua_CFunction)lua_textri, "textri"},
+#endif
+            {lua_dofile, "dofile"},
+            {lua_loadfile, "loadfile"},
+};
+
 void luaapi_open(lua_State* lua)
 {
     static const luaL_Reg loadedlibs[] =
@@ -1956,26 +1974,24 @@ void luaapi_open(lua_State* lua)
 
 void luaapi_init(tic_core* core)
 {
-    static const struct
-    {
-        lua_CFunction func;
-        const char* name;
-    } ApiItems[] =
-        {
-#define API_FUNC_DEF(name, ...) {(lua_CFunction)(lua_##name), #name},
-            TIC_API_LIST(API_FUNC_DEF)
-#undef API_FUNC_DEF
-
-#if defined(BUILD_DEPRECATED)
-                {(lua_CFunction)lua_textri, "textri"},
-#endif
-        };
-
     for(s32 i = 0; i < COUNT_OF(ApiItems); i++)
         registerLuaFunction(core, ApiItems[i].func, ApiItems[i].name);
+}
 
-    registerLuaFunction(core, lua_dofile, "dofile");
-    registerLuaFunction(core, lua_loadfile, "loadfile");
+const char* luaapi_cfunc_name(lua_CFunction func)
+{
+    if(!func) return NULL;
+    for(s32 i = 0; i < COUNT_OF(ApiItems); i++)
+        if(ApiItems[i].func == func) return ApiItems[i].name;
+    return NULL;
+}
+
+lua_CFunction luaapi_cfunc(const char* name)
+{
+    if(!name) return NULL;
+    for(s32 i = 0; i < COUNT_OF(ApiItems); i++)
+        if(strcmp(ApiItems[i].name, name) == 0) return ApiItems[i].func;
+    return NULL;
 }
 
 void luaapi_close(tic_mem* tic)

@@ -37,3 +37,8 @@ void luaapi_bdr(tic_mem* tic, s32 row, void* data);
 void luaapi_menu(tic_mem* tic, s32 index, void* data);
 void luaapi_close(tic_mem* tic);
 void luaapi_open(lua_State* lua);
+
+// Names of the TIC-80 C functions registered on a cart's Lua state.
+// NULL when func is not one of them. The reverse lookup is NULL for unknown names.
+const char* luaapi_cfunc_name(lua_CFunction func);
+lua_CFunction luaapi_cfunc(const char* name);
